@@ -162,7 +162,7 @@ function go(tab){
   const fab = document.getElementById("fab");
   fab.style.display = (tab==="products"||tab==="categories")?"grid":"none";
   const r = { dash:loadDash, orders:loadOrders, products:loadProducts,
-              more:loadMore, categories:loadCategories, users:loadUsers, payments:loadPayments };
+              more:loadMore, categories:loadCategories, users:loadUsers, payments:loadPayments, import:loadImport };
   (r[tab]||loadDash)();
 }
 function refresh(){ const b=document.getElementById("refreshBtn"); if(b){b.style.transition="transform .5s";b.style.transform="rotate(360deg)";setTimeout(()=>{b.style.transition="";b.style.transform="";},500);} go(S.tab); }
@@ -558,6 +558,7 @@ function loadMore(){
     <h1 class="page-title">Boshqa</h1>
     <div class="section-label" style="margin-left:4px">Katalog</div>
     ${item("🗂","Kategoriyalar","Mahsulot guruhlarini boshqarish","go('categories')")}
+    ${item("📦","Katalog import","50+ mahsulotni bir marta qo'shish","go('import')")}
     <div class="section-label" style="margin-left:4px">Mijozlar va to'lovlar</div>
     ${item("👥","Foydalanuvchilar","Mijozlar ro'yxati va statistikasi","go('users')")}
     ${item("💳","To'lovlar","To'lovlar tarixi va holatlari","go('payments')")}
@@ -569,4 +570,189 @@ function loadMore(){
       Mondo Cono Ice Creams · Admin<br>${S.me?esc([S.me.first_name,S.me.last_name].filter(Boolean).join(" ")):""}
     </div>
   `);
+}
+
+/* ============================================================
+   KATALOG IMPORT (bir martalik ommaviy qo'shish)
+   ============================================================ */
+const CATALOG = [
+  { c:{name_uz:"Eskimo", name_ru:"Эскимо", emoji:"🍫"}, p:[
+    {name_uz:"Mondo Dubai Pistachio (110g)", name_ru:"Mondo Dubai фисташка (110г)", emoji:"🟢", badge:"Hit"},
+    {name_uz:"Mondo Coconut Choco", name_ru:"Mondo Coconut Choco", emoji:"🥥"},
+    {name_uz:"Mondo Eskimo Lemon", name_ru:"Mondo Эскимо Лимон", emoji:"🍋"},
+    {name_uz:"Mondo Eskimo Chocolate", name_ru:"Mondo Эскимо Шоколад", emoji:"🍫"},
+    {name_uz:"Mondo Eskimo Vanilla", name_ru:"Mondo Эскимо Ваниль", emoji:"🤍"},
+    {name_uz:"Mondo Eskimo Berry", name_ru:"Mondo Эскимо Ягодный", emoji:"🫐"},
+    {name_uz:"Mondo Eskimo Mango", name_ru:"Mondo Эскимо Манго", emoji:"🥭"},
+    {name_uz:"Mondo Eskimo Passion Fruit", name_ru:"Mondo Эскимо Маракуйя", emoji:"🍐"},
+  ]},
+  { c:{name_uz:"Sorbet / Muzli", name_ru:"Сорбет / Лёд", emoji:"🧊"}, p:[
+    {name_uz:"CONO Sorbet Lemon", name_ru:"CONO Сорбет Лимон", emoji:"🍋"},
+    {name_uz:"CONO Sorbet Mango", name_ru:"CONO Сорбет Манго", emoji:"🥭"},
+    {name_uz:"CONO Sorbet Passion Fruit", name_ru:"CONO Сорбет Маракуйя", emoji:"🍐"},
+    {name_uz:"CONO Sorbet Melon (Qovun)", name_ru:"CONO Сорбет Дыня", emoji:"🍈"},
+    {name_uz:"CONO Sorbet Bubble Gum", name_ru:"CONO Сорбет Бабл Гам", emoji:"🩷"},
+    {name_uz:"CONO Sorbet Tutti Frutti", name_ru:"CONO Сорбет Тутти Фрутти", emoji:"🌈"},
+    {name_uz:"CONO Sorbet Apelsin", name_ru:"CONO Сорбет Апельсин", emoji:"🍊"},
+    {name_uz:"CONO Sorbet Cola", name_ru:"CONO Сорбет Кола", emoji:"🥤"},
+    {name_uz:"CONO Sorbet Klubnika", name_ru:"CONO Сорбет Клубника", emoji:"🍓"},
+    {name_uz:"CONO Sorbet Barbie", name_ru:"CONO Сорбет Барби", emoji:"💗"},
+    {name_uz:"Mondo Sorbet Limone (50g)", name_ru:"Mondo Сорбет Лимон (50г)", emoji:"🍋"},
+    {name_uz:"Mondo Sorbet Mango (50g)", name_ru:"Mondo Сорбет Манго (50г)", emoji:"🥭"},
+    {name_uz:"Mondo Sorbet Passion Fruit (50g)", name_ru:"Mondo Сорбет Маракуйя (50г)", emoji:"🍐"},
+  ]},
+  { c:{name_uz:"Stakanchik 150g", name_ru:"Стаканчик 150г", emoji:"🍨"}, p:[
+    {name_uz:"Mondo Banana 150g", name_ru:"Mondo Банан 150г", emoji:"🍌"},
+    {name_uz:"Mondo Forest Berries 150g", name_ru:"Mondo Лесные ягоды 150г", emoji:"🫐"},
+    {name_uz:"Mondo Strawberry 150g", name_ru:"Mondo Клубника 150г", emoji:"🍓"},
+    {name_uz:"Mondo Vanilla 150g", name_ru:"Mondo Ваниль 150г", emoji:"🤍"},
+    {name_uz:"Mondo Chocolate 150g", name_ru:"Mondo Шоколад 150г", emoji:"🍫"},
+  ]},
+  { c:{name_uz:"Vanna 500g", name_ru:"Ванна 500г", emoji:"🥡"}, p:[
+    {name_uz:"Mondo Vanilla 500g", name_ru:"Mondo Ваниль 500г", emoji:"🤍"},
+    {name_uz:"Mondo Forest Berries 500g", name_ru:"Mondo Лесные ягоды 500г", emoji:"🫐"},
+    {name_uz:"Mondo Banana 500g", name_ru:"Mondo Банан 500г", emoji:"🍌"},
+    {name_uz:"Mondo Chocolate 500g", name_ru:"Mondo Шоколад 500г", emoji:"🍫"},
+    {name_uz:"Mondo Plombir sliv. 500g", name_ru:"Mondo Пломбир сливочный 500г", emoji:"🍦"},
+    {name_uz:"Mondo Plombir Chocolate 500g", name_ru:"Mondo Пломбир шоколадный 500г", emoji:"🍫"},
+    {name_uz:"Mondo Sorbet Limone 120g", name_ru:"Mondo Сорбет Лимон 120г", emoji:"🍋"},
+    {name_uz:"Mondo Sorbet Mango 120g", name_ru:"Mondo Сорбет Манго 120г", emoji:"🥭"},
+    {name_uz:"Mondo Sorbet Passion Fruit 120g", name_ru:"Mondo Сорбет Маракуйя 120г", emoji:"🍐"},
+  ]},
+  { c:{name_uz:"Family 1000g", name_ru:"Семейный 1000г", emoji:"👨‍👩‍👧"}, p:[
+    {name_uz:"Dilkash Sliv. 1000g", name_ru:"Dilkash Сливочное 1000г", emoji:"🤍"},
+    {name_uz:"Dilkash Klubnika 1000g", name_ru:"Dilkash Клубника 1000г", emoji:"🍓"},
+    {name_uz:"Dilkash Banan 1000g", name_ru:"Dilkash Банан 1000г", emoji:"🍌"},
+    {name_uz:"Dilkash Shokolad 1000g", name_ru:"Dilkash Шоколад 1000г", emoji:"🍫"},
+  ]},
+  { c:{name_uz:"To'plam / Quti", name_ru:"Набор / Коробка", emoji:"🎁"}, p:[
+    {name_uz:"Mondo Sorbet Limone (10 dona)", name_ru:"Mondo Сорбет Лимон (10шт)", emoji:"🍋"},
+    {name_uz:"Mondo Sorbet Mango (10 dona)", name_ru:"Mondo Сорбет Манго (10шт)", emoji:"🥭"},
+    {name_uz:"Mondo Sorbet Passion Fruit (10 dona)", name_ru:"Mondo Сорбет Маракуйя (10шт)", emoji:"🍐"},
+    {name_uz:"CONO Fruity Pop", name_ru:"CONO Fruity Pop", emoji:"🍬", badge:"Yangi"},
+    {name_uz:"CONO Bon Bon Klubnika", name_ru:"CONO Bon Bon Клубника", emoji:"🍓"},
+    {name_uz:"CONO Bon Bon Banan", name_ru:"CONO Bon Bon Банан", emoji:"🍌"},
+    {name_uz:"CONO Bon Bon Shokolad", name_ru:"CONO Bon Bon Шоколад", emoji:"🍫"},
+    {name_uz:"CONO Bon Bon Pista", name_ru:"CONO Bon Bon Фисташка", emoji:"🟢"},
+    {name_uz:"CONO Bon Bon Kokos", name_ru:"CONO Bon Bon Кокос", emoji:"🥥"},
+  ]},
+  { c:{name_uz:"Maxsus desert", name_ru:"Спец. десерт", emoji:"🍰"}, p:[
+    {name_uz:"CONO Can (desert muzqaymoq)", name_ru:"CONO Can (десертное)", emoji:"🥫"},
+    {name_uz:"CONO The Cake (tort-muzqaymoq)", name_ru:"CONO The Cake (торт)", emoji:"🍰"},
+    {name_uz:"CONO KFC (vafli kroshka)", name_ru:"CONO KFC (вафельная крошка)", emoji:"🍗"},
+  ]},
+  { c:{name_uz:"Ichimlik", name_ru:"Напитки", emoji:"🥤"}, p:[
+    {name_uz:"CONO Life Qulupnay", name_ru:"CONO Life Клубника", emoji:"🍓"},
+    {name_uz:"CONO Life Mango", name_ru:"CONO Life Манго", emoji:"🥭"},
+    {name_uz:"CONO Life Shaftoli", name_ru:"CONO Life Персик", emoji:"🍑"},
+  ]},
+  { c:{name_uz:"Shirinliklar", name_ru:"Сладости", emoji:"🍬"}, p:[
+    {name_uz:"Uzbekistan O'rik + pista", name_ru:"Uzbekistan Абрикос с фисташками", emoji:"🟢"},
+    {name_uz:"Uzbekistan O'rik + bodom", name_ru:"Uzbekistan Абрикос с миндалём", emoji:"🤎"},
+    {name_uz:"Uzbekistan Qoqi + bodom", name_ru:"Uzbekistan Чернослив с миндалём", emoji:"🟤"},
+    {name_uz:"Uzbekistan Qoqi + yong'oq", name_ru:"Uzbekistan Чернослив с грецким орехом", emoji:"🌰"},
+  ]},
+];
+
+function loadImport(){
+  let total = 0;
+  const blocks = CATALOG.map((blk,ci)=>{
+    const rows = blk.p.map((pr,pi)=>{
+      total++;
+      return `<div class="imp-row" data-imp data-ci="${ci}" data-pi="${pi}">
+        <input type="checkbox" class="imp-check" checked>
+        <span class="imp-emoji">${pr.emoji||"🍦"}</span>
+        <span class="imp-name">${esc(pr.name_uz)}</span>
+        <input type="number" inputmode="numeric" class="imp-price" placeholder="narx">
+      </div>`;
+    }).join("");
+    return `<div class="panel" style="padding:13px 14px">
+      <h3 style="margin-bottom:9px">${blk.c.emoji} ${esc(blk.c.name_uz)} <span style="font-size:12px;color:var(--muted);font-weight:500;font-family:Inter">${blk.p.length} ta</span></h3>
+      ${rows}</div>`;
+  }).join("");
+
+  setPage(`
+    <h1 class="page-title">Katalog import</h1>
+    <div class="panel" style="background:var(--cone-soft);box-shadow:none">
+      <div style="font-size:13px;line-height:1.6;color:#7A5C1E">
+        <b>Bir marta bosib</b> butun katalogni qo'shing. Har mahsulotga narx kiriting (so'mda).
+        Narxsiz qoldirsangiz — <b>qoralama</b> (yashirin) bo'lib qo'shiladi, keyin tahrirlab faollashtirasiz.
+        Belgini olib tashlab, kerakmas mahsulotni o'tkazib yuborishingiz mumkin.
+      </div>
+    </div>
+    ${blocks}
+    <button class="btn primary block" style="margin-top:8px;position:sticky;bottom:96px" onclick="runImport()">
+      ⬇️ Tanlanganlarni import qilish
+    </button>
+    <div style="height:10px"></div>
+  `);
+}
+
+async function runImport(){
+  const rows = [...document.querySelectorAll('.imp-row')]
+    .filter(r=>r.querySelector('.imp-check').checked)
+    .map(r=>({ ci:+r.dataset.ci, pi:+r.dataset.pi, price:parseInt(r.querySelector('.imp-price').value||"0",10) }));
+  if(!rows.length){ toast("Hech narsa tanlanmadi","err"); return; }
+
+  haptic("medium");
+  openModal(`<h2>Import qilinyapti…</h2>
+    <p class="modal-sub">Iltimos kuting, oynani yopmang.</p>
+    <div style="background:var(--cream);border-radius:12px;overflow:hidden;height:10px;margin:14px 0">
+      <div id="impBar" style="height:100%;width:0;background:var(--pink);transition:width .2s"></div></div>
+    <div id="impStatus" style="font-size:13px;color:var(--muted);text-align:center">Tayyorlanmoqda…</div>`);
+  const setBar=(p,t)=>{ const b=document.getElementById("impBar"); if(b)b.style.width=p+"%"; const s=document.getElementById("impStatus"); if(s)s.textContent=t; };
+
+  let cats, prods;
+  try{ [cats,prods] = await Promise.all([api("/admin/categories"), api("/admin/products")]); }
+  catch(e){ closeModal(); toast(e.message,"err"); return; }
+
+  const norm = s => s.toLowerCase().trim();
+  const catByName = {}; cats.forEach(c=>catByName[norm(c.name_uz)]=c.id);
+  const existProd = new Set(prods.map(p=>norm(p.name_uz)));
+
+  // kerakli kategoriyalar
+  const neededCats = [...new Set(rows.map(r=>r.ci))];
+  let done=0, created=0, drafts=0, skipped=0, failed=0;
+  const totalSteps = neededCats.length + rows.length;
+
+  // 1) kategoriyalarni yaratamiz
+  for(const ci of neededCats){
+    const c = CATALOG[ci].c;
+    if(!catByName[norm(c.name_uz)]){
+      try{
+        const nc = await api("/admin/categories",{method:"POST",body:{...c, sort_order:ci, is_active:true}});
+        catByName[norm(c.name_uz)] = nc.id;
+      }catch(e){ /* ehtimol mavjud */ }
+    }
+    done++; setBar(Math.round(done/totalSteps*100), `Kategoriyalar: ${c.name_uz}`);
+  }
+
+  // 2) mahsulotlarni yaratamiz
+  for(const r of rows){
+    const blk = CATALOG[r.ci]; const pr = blk.p[r.pi];
+    done++; setBar(Math.round(done/totalSteps*100), `Qo'shilyapti: ${pr.name_uz}`);
+    if(existProd.has(norm(pr.name_uz))){ skipped++; continue; }
+    const catId = catByName[norm(blk.c.name_uz)];
+    if(!catId){ failed++; continue; }
+    const active = r.price>0;
+    try{
+      await api("/admin/products",{method:"POST",body:{
+        category_id:catId, name_uz:pr.name_uz, name_ru:pr.name_ru,
+        price:r.price||0, stock:100, emoji:pr.emoji||"🍦",
+        badge:pr.badge||null, is_active:active,
+      }});
+      if(active) created++; else drafts++;
+    }catch(e){ failed++; }
+  }
+
+  closeModal(); notify("success");
+  openModal(`<h2>✅ Import tugadi!</h2>
+    <div style="margin:10px 0 18px;font-size:14px;line-height:1.9">
+      🟢 Faol qo'shildi: <b>${created}</b><br>
+      📝 Qoralama (narxsiz): <b>${drafts}</b><br>
+      ⏭ O'tkazib yuborildi (mavjud): <b>${skipped}</b><br>
+      ${failed?`❌ Xato: <b>${failed}</b><br>`:""}
+    </div>
+    <p class="modal-sub">Qoralama mahsulotlarga narx + rasm qo'shib, "Faol" qiling — shunda do'konda ko'rinadi.</p>
+    <button class="btn primary block" onclick="closeModal();go('products')">Mahsulotlarga o'tish</button>`);
 }
