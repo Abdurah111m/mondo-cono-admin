@@ -93,7 +93,7 @@ function confirmDialog(title, text, okLabel, onOk, danger=true){
 }
 
 /* ---------- app state ---------- */
-const S = { tab:"dash", me:null, cats:[], products:[], orderFilter:"", payFilter:"" };
+const S = { tab:"dash", me:null, cats:[], products:[], cards:[], orderFilter:"", payFilter:"" };
 
 /* ---------- boot: verify admin ---------- */
 async function boot(){
@@ -163,13 +163,13 @@ function go(tab){
   const navId = (tab==="dash"||tab==="orders"||tab==="products")?tab:"more";
   document.getElementById("nav-"+navId)?.classList.add("active");
   const fab = document.getElementById("fab");
-  fab.style.display = (tab==="products"||tab==="categories")?"grid":"none";
+  fab.style.display = (tab==="products"||tab==="categories"||tab==="cards")?"grid":"none";
   const r = { dash:loadDash, orders:loadOrders, products:loadProducts,
-              more:loadMore, categories:loadCategories, users:loadUsers, payments:loadPayments, import:loadImport };
+              more:loadMore, categories:loadCategories, users:loadUsers, payments:loadPayments, import:loadImport, cards:loadCards };
   (r[tab]||loadDash)();
 }
 function refresh(){ const b=document.getElementById("refreshBtn"); if(b){b.style.transition="transform .5s";b.style.transform="rotate(360deg)";setTimeout(()=>{b.style.transition="";b.style.transform="";},500);} go(S.tab); }
-function fabAction(){ if(S.tab==="products") productForm(); else if(S.tab==="categories") categoryForm(); }
+function fabAction(){ if(S.tab==="products") productForm(); else if(S.tab==="categories") categoryForm(); else if(S.tab==="cards") cardForm(); }
 function setPage(html){ document.getElementById("page").innerHTML = `<div class="page">${html}</div>`; }
 function pageLoader(text="Yuklanmoqda…"){ setPage(`<div class="loader"><div class="spinner"></div><p>${esc(text)}</p></div>`); }
 
@@ -502,6 +502,68 @@ function askDeleteCategory(id){
 }
 
 /* ============================================================
+   TO'LOV KARTALARI (mijozga checkout'da ko'rsatiladi)
+   ============================================================ */
+async function loadCards(){
+  pageLoader("Kartalar yuklanmoqda…");
+  try{
+    const cards = await api("/admin/payment-cards"); S.cards=cards;
+    let body;
+    if(!cards.length){
+      body = emptyBox("💳","Karta yo'q","Pastdagi ＋ orqali birinchi to'lov kartangizni qo'shing. Mijoz shu kartaga pul o'tkazib, chek yuboradi.");
+    } else {
+      body = cards.map(c=>`<div class="lc"><div class="lc-top">
+        <div><div class="lc-id">💳 ${esc(c.number)}</div>
+          <div class="lc-sub">${esc(c.holder)}${c.bank?" · "+esc(c.bank):""} · tartib: ${c.sort_order}</div></div>
+        <span class="pill ${c.is_active?'delivered':'muted'}" style="font-size:11px">${c.is_active?"Faol":"O'chiq"}</span></div>
+        <div class="lc-actions">
+          <button class="btn soft sm" onclick="cardForm(${c.id})">✏️ Tahrirlash</button>
+          <button class="btn danger sm" onclick="askDeleteCard(${c.id})">🗑 O'chirish</button>
+        </div></div>`).join("");
+    }
+    setPage(`<h1 class="page-title">To'lov kartalari</h1>
+      <p style="color:var(--muted);font-size:13px;margin:-6px 4px 16px;line-height:1.55">Bu kartalar mijozga buyurtma rasmiylashtirishda <b>"Karta o'tkazma"</b> tanlanganda ko'rsatiladi. Faqat <b>Faol</b> kartalar ko'rinadi.</p>
+      ${body}`);
+  }catch(e){ setPage(errBox(e)); }
+}
+function cardForm(id){
+  const c = id ? S.cards.find(x=>x.id===id) : null;
+  openModal(`
+    <h2>${c?"Kartani tahrirlash":"Yangi karta"}</h2>
+    <p class="modal-sub">${c?"#"+c.id:"Mijoz shu kartaga pul o'tkazadi"}</p>
+    <div class="field"><label>Karta raqami *</label><input id="cd_number" inputmode="numeric" value="${c?esc(c.number):""}" placeholder="8600 1234 5678 9012"></div>
+    <div class="field"><label>Karta egasi *</label><input id="cd_holder" value="${c?esc(c.holder):""}" placeholder="ABDURAHIM X"></div>
+    <div class="row2">
+      <div class="field"><label>Bank / tur</label><input id="cd_bank" value="${c&&c.bank?esc(c.bank):""}" placeholder="Uzcard / Humo"></div>
+      <div class="field"><label>Tartib raqami</label><input id="cd_sort" type="number" inputmode="numeric" value="${c?c.sort_order:"0"}"></div>
+    </div>
+    <div class="switch-row"><span>Faol (mijozga ko'rinadi)</span><div class="switch ${(!c||c.is_active)?'on':''}" id="cd_active" onclick="this.classList.toggle('on')"></div></div>
+    <button class="btn primary block" id="cdSave" onclick="saveCard(${id||0})">${c?"Saqlash":"Qo'shish"}</button>
+    <button class="btn ghost block" style="margin-top:10px" onclick="closeModal()">Bekor qilish</button>
+  `);
+}
+async function saveCard(id){
+  const v=s=>document.getElementById(s).value.trim();
+  const body={ number:v("cd_number"), holder:v("cd_holder"), bank:v("cd_bank")||null,
+    sort_order:parseInt(v("cd_sort")||"0",10), is_active:document.getElementById("cd_active").classList.contains("on") };
+  if(!body.number||body.number.length<4){ toast("Karta raqamini to'g'ri kiriting","err"); return; }
+  if(!body.holder){ toast("Karta egasining ismini kiriting","err"); return; }
+  const btn=document.getElementById("cdSave"); btn.disabled=true; btn.textContent="Saqlanmoqda…";
+  try{
+    if(id) await api(`/admin/payment-cards/${id}`,{method:"PUT",body});
+    else   await api(`/admin/payment-cards`,{method:"POST",body});
+    notify("success"); closeModal(); toast(id?"Saqlandi":"Karta qo'shildi","ok"); loadCards();
+  }catch(e){ btn.disabled=false; btn.textContent="Saqlash"; toast(e.message,"err"); }
+}
+function askDeleteCard(id){
+  const c=S.cards.find(x=>x.id===id);
+  confirmDialog("Kartani o'chirish?",(c?c.number:"Karta")+" o'chiriladi. Mijozlar endi buni ko'rmaydi.","🗑 O'chirish",async()=>{
+    try{ await api(`/admin/payment-cards/${id}`,{method:"DELETE"}); notify("success"); toast("O'chirildi","ok"); loadCards(); }
+    catch(e){ toast(e.message,"err"); }
+  });
+}
+
+/* ============================================================
    FOYDALANUVCHILAR
    ============================================================ */
 async function loadUsers(){
@@ -564,7 +626,8 @@ function loadMore(){
     ${item("📦","Katalog import","50+ mahsulotni bir marta qo'shish","go('import')")}
     <div class="section-label" style="margin-left:4px">Mijozlar va to'lovlar</div>
     ${item("👥","Foydalanuvchilar","Mijozlar ro'yxati va statistikasi","go('users')")}
-    ${item("💳","To'lovlar","To'lovlar tarixi va holatlari","go('payments')")}
+    ${item("💳","To'lov kartalari","Mijozga ko'rsatiladigan o'tkazma kartalari","go('cards')")}
+    ${item("💰","To'lovlar","To'lovlar tarixi va holatlari","go('payments')")}
     <div class="section-label" style="margin-left:4px">Tez orada qo'shiladi</div>
     ${item("📣","Ommaviy xabar","Barcha mijozlarga xabar yuborish","",true)}
     ${item("🏷","Chegirmalar","Promo-kod va aksiyalar","",true)}
